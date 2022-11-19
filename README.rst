@@ -49,6 +49,16 @@ Examples
      1599×899       /sdcard/IMG-20220827-WA0003.jpg
      3840×2160      /disk/photos/IMG_20220827_165006.JPG
 
+.. code:: shell
+
+ $ ./find-duplicate-images.py --manual-validation /sdcard /disk
+ Images are potentially the same (SSIM = 0.955253):
+ # Here a window shows to 2 images side by side
+ Are these the same images? [y/n] y
+ You confirmed that images ARE the same:
+     1599×899       /sdcard/IMG-20220813-WA0012.jpg
+     3840×2160      /disk/photos/IMG_20220813_141753.JPG
+
 License
 -------
 

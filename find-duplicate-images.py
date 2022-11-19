@@ -22,6 +22,7 @@ import os
 import re
 import subprocess
 import tempfile
+import webbrowser
 import zlib
 
 
@@ -86,12 +87,35 @@ def compute_SSIM(file1, file2):
         return file1, file2, ssim
 
 
+def ask_manual_comparison(file1, file2):
+    with (tempfile.NamedTemporaryFile(suffix='.jpg') as f1,
+            tempfile.NamedTemporaryFile(suffix='.jpg') as f2,
+            tempfile.NamedTemporaryFile(suffix='.jpg') as f):
+        subprocess.check_call((
+            'convert', '-auto-orient', file1, '-resize', '360x360',
+            '-background', 'white', '-gravity', 'center', '-extent', '400x400',
+            f1.name))
+        subprocess.check_call((
+            'convert', '-auto-orient', file2, '-resize', '360x360',
+            '-background', 'white', '-gravity', 'center', '-extent', '400x400',
+            f2.name))
+        subprocess.check_call(('convert', '+append', f1.name, f2.name, f.name))
+        webbrowser.open(f.name)
+
+        res = None
+        while res not in ('y', 'n'):
+            res = input('Are these the same images? [y/n] ')
+        return res == 'y'
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Find visually similar images in a list of paths.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='+',
                         help='list of images or directories')
+    parser.add_argument('--manual-validation', action='store_true',
+                        help='show an image to manually confirm duplicates')
     args = parser.parse_args()
 
     full_paths = args.path
@@ -126,6 +150,10 @@ def main():
     for file1, file2, ssim in outputs:
         if ssim >= SSIM_THRESHOLD:
             print(f'\nImages are potentially the same (SSIM = {ssim}):')
+            if args.manual_validation:
+                if not ask_manual_comparison(file1, file2):
+                    continue
+                print('You confirmed that images ARE the same:')
             size1 = '×'.join(image_dimensions(file1))
             size2 = '×'.join(image_dimensions(file2))
             print(f'    {size1: <13}  {file1}')
