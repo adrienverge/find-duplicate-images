@@ -66,16 +66,22 @@ def compute_SSIM(file1, file2):
         w1, h1, w2, h2 = w2, h2, w1, h1
 
     with tempfile.NamedTemporaryFile(suffix='.jpg') as f:
-        subprocess.check_call((
-            'convert', '-auto-orient', file2, '-resize', f'{w1}x{h1}!',
-            '-strip', f.name))
+        if w1 == w2 and h1 == h2:
+            second = file2
+        else:
+            subprocess.check_call((
+                'convert', '-auto-orient', file2, '-resize', f'{w1}x{h1}!',
+                '-strip', f.name))
+            second = f.name
 
         out = subprocess.run(
-            ('ffmpeg', '-i', file1, '-i', f.name, '-lavfi', 'ssim', '-f',
+            ('ffmpeg', '-i', file1, '-i', second, '-lavfi', 'ssim', '-f',
              'null', '-'), stderr=subprocess.PIPE).stderr
         res = [l for l in out.splitlines() if b' SSIM ' in l and b'All:' in l]
         assert len(res) == 1, f'failed to parse ffmpeg output: {out}'
-        ssim = float(re.search(r' All:(0\.[0-9]+) ', res[0].decode()).group(1))
+        search = re.search(r' All:([01]\.[0-9]+) ', res[0].decode())
+        assert search, f'failed to parse ffmpeg output: {res[0]}'
+        ssim = float(search.group(1))
 
         return file1, file2, ssim
 
