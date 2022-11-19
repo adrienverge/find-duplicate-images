@@ -29,7 +29,7 @@ import zlib
 # seems good.
 THUMBNAIL_SIZE = 16
 
-SSIM_THRESHOLD = 0.9
+SSIM_THRESHOLD = 0.8
 
 
 def checksum_of_thumbnail(file):
