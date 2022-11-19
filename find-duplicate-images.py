@@ -75,8 +75,8 @@ def compute_SSIM(file1, file2):
             second = f.name
 
         out = subprocess.run(
-            ('ffmpeg', '-i', file1, '-i', second, '-lavfi', 'ssim', '-f',
-             'null', '-'), stderr=subprocess.PIPE).stderr
+            ('ffmpeg', '-nostdin', '-i', file1, '-i', second, '-lavfi', 'ssim',
+             '-f', 'null', '-'), stderr=subprocess.PIPE).stderr
         res = [l for l in out.splitlines() if b' SSIM ' in l and b'All:' in l]
         assert len(res) == 1, f'failed to parse ffmpeg output: {out}'
         search = re.search(r' All:([01]\.[0-9]+) ', res[0].decode())
