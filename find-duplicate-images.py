@@ -27,9 +27,9 @@ import webbrowser
 import zlib
 
 
-# I found empirically that 8 is too low (too many false positives), but 16
-# seems good.
-THUMBNAIL_SIZE = 16
+# I chose the value 8 (although it gives a few false positives), because 16 is
+# too large, and misses some duplicates.
+THUMBNAIL_SIZE = 8
 
 SSIM_THRESHOLD = 0.8
 
