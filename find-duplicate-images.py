@@ -221,8 +221,8 @@ def main():
                 print('You confirmed that images ARE the same:')
             size1 = '×'.join(image_dimensions(file1))
             size2 = '×'.join(image_dimensions(file2))
-            print(f'    {size1: <13}  {file1}')
-            print(f'    {size2: <13}  {file2}')
+            print(f'    {size1: <13}  {repr(file1)}')
+            print(f'    {size2: <13}  {repr(file2)}')
 
 
 if __name__ == '__main__':
