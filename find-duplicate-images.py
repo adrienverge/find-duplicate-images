@@ -17,6 +17,7 @@
 import argparse
 import collections
 import glob
+import json
 import multiprocessing
 import os
 import re
@@ -108,6 +109,55 @@ def ask_manual_comparison(file1, file2):
         return res == 'y'
 
 
+class Cache:
+    def __init__(self):
+        self.file = os.path.join(
+            tempfile.gettempdir(),
+            f'find-duplicate-images-{os.getuid()}-cache.json')
+        self._load_from_disk()
+
+    def _load_from_disk(self):
+        try:
+            with open(self.file, 'r') as f:
+                contents = json.loads(f.read())
+                self.checksums = contents.get('checksums', {})
+                self.similarities = contents.get('similarities', {})
+        except FileNotFoundError:
+            self.checksums = {}
+            self.similarities = {}
+
+    def _save_to_disk(self):
+        with open(self.file, 'w') as f:
+            json.dump({'checksums': self.checksums,
+                       'similarities': self.similarities}, f)
+
+    def path_hash(self, file):
+        return str(zlib.crc32(os.path.abspath(file).encode()))
+
+    def get_checksum(self, file):
+        return self.checksums.get(self.path_hash(file))
+
+    def save_checksums(self, results):
+        self._load_from_disk()
+        new = {self.path_hash(file): checksum for file, checksum in results}
+        self.checksums = self.checksums | new
+        self._save_to_disk()
+
+    def paths_hash(self, file1, file2):
+        h1, h2 = self.path_hash(file1), self.path_hash(file2)
+        h1, h2 = min(int(h1), int(h2)), max(int(h1), int(h2))
+        return f'{h1} {h2}'
+
+    def get_similarity(self, file1, file2):
+        return self.similarities.get(self.paths_hash(file1, file2))
+
+    def save_similarities(self, results):
+        self._load_from_disk()
+        new = {self.paths_hash(f1, f2): ssim for f1, f2, ssim in results}
+        self.similarities = self.similarities | new
+        self._save_to_disk()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Find visually similar images in a list of paths.',
@@ -130,8 +180,17 @@ def main():
 
     print(f'Found {len(files)} JPEG files to check')
 
-    print('Computing visually-tolerant checksums of images…')
-    outputs = multiprocessing.Pool().map(checksum_of_thumbnail, files)
+    cache = Cache()
+
+    cached = [(f, cache.get_checksum(f)) for f in files]
+    todo = [f for f, c in cached if c is None]
+    cached_outputs = [(f, c) for f, c in cached if c is not None]
+    print(f'Computing {len(todo)} visually-tolerant checksums of '
+          f'images (found {len(cached_outputs)} in cache)…')
+    outputs = multiprocessing.Pool().map(checksum_of_thumbnail, todo)
+    cache.save_checksums(outputs)
+    outputs = cached_outputs + outputs
+
     checksums = [i[1] for i in outputs]
     redundant = [i for i, n in collections.Counter(checksums).items() if n > 1]
     duplicates = [[i[0] for i in outputs if i[1] == s] for s in redundant]
@@ -144,8 +203,14 @@ def main():
             for j in range(i + 1, len(matches)):
                 pairs.append((matches[i], matches[j]))
 
-    print('Computing structural similarity of pairs of images…')
-    outputs = multiprocessing.Pool().starmap(compute_SSIM, pairs)
+    cached = [(*p, cache.get_similarity(*p)) for p in pairs]
+    todo = [(f1, f2) for f1, f2, s in cached if s is None]
+    cached_outputs = [(f1, f2, s) for f1, f2, s in cached if s is not None]
+    print(f'Computing structural similarity of {len(todo)} pairs of images '
+          f'(found {len(cached_outputs)} in cache)…')
+    outputs = multiprocessing.Pool().starmap(compute_SSIM, todo)
+    cache.save_similarities(outputs)
+    outputs = cached_outputs + outputs
 
     for file1, file2, ssim in outputs:
         if ssim >= SSIM_THRESHOLD:
