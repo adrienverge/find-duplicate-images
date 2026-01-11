@@ -37,7 +37,7 @@ SSIM_THRESHOLD = 0.8
 def checksum_of_thumbnail(file):
     with tempfile.NamedTemporaryFile(suffix='.png') as f:
         subprocess.check_call((
-            'convert', '-auto-orient', file, '-resize',
+            'magick', file, '-auto-orient', '-resize',
             f'{THUMBNAIL_SIZE}x{THUMBNAIL_SIZE}^', '-type', 'bilevel',
             '-strip', f.name))
 
@@ -72,7 +72,7 @@ def compute_SSIM(file1, file2):
             second = file2
         else:
             subprocess.check_call((
-                'convert', '-auto-orient', file2, '-resize', f'{w1}x{h1}!',
+                'magick', file2, '-auto-orient', '-resize', f'{w1}x{h1}!',
                 '-strip', f.name))
             second = f.name
 
@@ -93,14 +93,14 @@ def ask_manual_comparison(file1, file2):
             tempfile.NamedTemporaryFile(suffix='.jpg') as f2,
             tempfile.NamedTemporaryFile(suffix='.jpg') as f):
         subprocess.check_call((
-            'convert', '-auto-orient', file1, '-resize', '360x360',
+            'magick', file1, '-auto-orient', '-resize', '360x360',
             '-background', 'white', '-gravity', 'center', '-extent', '400x400',
             f1.name))
         subprocess.check_call((
-            'convert', '-auto-orient', file2, '-resize', '360x360',
+            'magick', file2, '-auto-orient', '-resize', '360x360',
             '-background', 'white', '-gravity', 'center', '-extent', '400x400',
             f2.name))
-        subprocess.check_call(('convert', '+append', f1.name, f2.name, f.name))
+        subprocess.check_call(('magick', '+append', f1.name, f2.name, f.name))
         webbrowser.open(f.name)
 
         res = None
