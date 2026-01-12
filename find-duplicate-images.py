@@ -100,7 +100,7 @@ def ask_manual_comparison(file1, file2):
             'magick', file2, '-auto-orient', '-resize', '360x360',
             '-background', 'white', '-gravity', 'center', '-extent', '400x400',
             f2.name))
-        subprocess.check_call(('magick', '+append', f1.name, f2.name, f.name))
+        subprocess.check_call(('magick', f1.name, f2.name, '+append', f.name))
         webbrowser.open(f.name)
 
         res = None
